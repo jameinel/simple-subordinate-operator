@@ -2,7 +2,7 @@
 # See https://juju.is/docs/sdk/charmcraft-config for guidance.
 
 # (Required)
-name: simple-subordinate-operator
+name: simple-subordinate
 
 
 # (Required)
