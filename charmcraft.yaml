@@ -1,0 +1,95 @@
+# This file configures Charmcraft.
+# See https://juju.is/docs/sdk/charmcraft-config for guidance.
+
+# (Required)
+name: simple-subordinate-operator
+
+
+# (Required)
+type: charm
+
+
+# (Recommended)
+title: Simple subordinate charm
+
+
+# (Required)
+summary: A simple charm whose only purpose is to allow you to run a lot of subordinates.
+
+
+# (Required)
+description: |
+  A simple charm whose only purpose is to allow you to run a lot of subordinates.
+  
+  This doesn't install any additional applications, or configure anything. It
+  just exists so that Juju can spin up unit agents and update its model to
+  include more and more charms and applications that we are tracking.
+
+
+# (Required for 'charm' type)
+platforms:
+  ubuntu@24.04:amd64:
+  ubuntu@22.04:amd64:
+  ubuntu@20.04:amd64:
+  ubuntu@24.04:arm64:
+  ubuntu@22.04:arm64:
+  ubuntu@20.04:arm64:
+
+subordinate: true
+
+requires:
+  primary:
+    interface: juju-info
+    scope: container
+
+# (Optional) Configuration options for the charm
+# This config section defines charm config options, and populates the Configure
+# tab on Charmhub.
+# More information on this section at https://juju.is/docs/sdk/charmcraft-yaml#heading--config
+# General configuration documentation: https://juju.is/docs/sdk/config
+config:
+  options:
+    s-config:
+      description: |
+        Gives a space for you to create a string for this charms configuration.
+        Has no effect.
+      default: "info"
+      type: string
+
+parts:
+  charm-uv:
+    plugin: uv
+    source: .
+    build-snaps:
+      - astral-uv
+    build-packages:
+      - pkg-config  # Needed to build Python dependencies with Rust from source
+    uv-groups:
+      - charm
+      - libs
+    override-build: |
+      # Workaround for https://github.com/canonical/charmcraft/issues/2068
+      # rustup used to install rustc and cargo, which are needed to build Python dependencies with Rust from source
+      if [[ "$CRAFT_PLATFORM" == ubuntu@20.04:* || "$CRAFT_PLATFORM" == ubuntu@22.04:* ]]
+      then
+        snap install rustup --classic
+      else
+        apt-get install rustup -y
+      fi
+
+      # If Ubuntu version < 24.04, rustup was installed from snap instead of from the Ubuntu
+      # archive—which means the rustup version could be updated at any time. Print rustup version
+      # to build log to make changes to the snap's rustup version easier to track
+      rustup --version
+
+      # rpds-py (Python package) >=0.19.0 requires rustc >=1.76, which is not available in the
+      # Ubuntu 22.04 archive. Install rustc and cargo using rustup instead of the Ubuntu archive
+      rustup set profile minimal
+      rustup default 1.87.0  # renovate: charmcraft-rust-latest
+
+      craftctl default
+  files:
+    plugin: dump
+    source: .
+    stage:
+      - LICENSE
